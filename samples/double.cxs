@@ -1,0 +1,21 @@
+# double.cxs
+# Simple function: f(x) = (x + 5 - 3) * 2
+# Equivalent to the built-in sample — use this to test file mode.
+
+.block .entry
+  label  .entry
+  add    rax, 5
+  sub    rax, 3
+  jmp    .multiply
+.end
+
+.block .multiply
+  label  .multiply
+  imul   rax, 2
+  jmp    .done
+.end
+
+.block .done
+  label  .done
+  ret
+.end
