@@ -1,102 +1,106 @@
-# MyOS — ARM64 Monolithic Kernel
+# CXS — Code eXecution Scrambler v4.0
+
+**Polymorphic Self-Modifying ASM Engine with 30 Obfuscation Transforms**
 
 ```
-  █▀▄▀█ █▄█ █▀█ █▀
-  █░▀░█ ░█░ █▄█ ▄█
+  ██████╗██╗  ██╗███████╗
+ ██╔════╝╚██╗██╔╝██╔════╝
+ ██║      ╚███╔╝ ███████╗
+ ██║      ██╔██╗ ╚════██║
+ ╚██████╗██╔╝ ██╗███████║
+  ╚═════╝╚═╝  ╚═╝╚══════╝
 ```
 
-**MyOS** adalah kernel monolitik minimalis untuk arsitektur **ARM64 (AArch64)**, ditulis dari nol dalam C dan Assembly. Berjalan langsung di QEMU `virt` machine tanpa bootloader tambahan.
+CXS adalah engine obfuskasi kode canggih yang mengubah program Representasi Perantara (IR) menjadi output yang setara secara semantik namun sangat sulit dianalisis. Ini dicapai melalui pipeline 30 transformasi berlapis dan kemampuan untuk menghasilkan file assembly (`.S`) yang dapat di-assemble.
 
 ---
 
-## Fitur
+## Dokumentasi Lengkap
 
-| Komponen | Detail |
-|----------|--------|
-| Arsitektur | AArch64 — EL2 → EL1 drop |
-| UART | PL011 driver @ `0x09000000` |
-| Memory | Heap allocator — kmalloc / kfree |
-| Filesystem | ramfs in-memory, 64 node, 4 KB per file |
-| Network | VirtIO-NET + stack TCP/IP |
-| HTTP | HTTP/1.1 client (GET + download ke file) |
-| Archive | Extractor TAR ustar + ZIP stored/deflate |
-| Exec | ELF64 loader untuk binary ARM64 |
-| Shell | CLI interaktif, error fuzzy matching |
-| Package Manager | `mos` — install dari GitHub, URL, atau registry |
-| Error Handler | Exception handler + auto reboot, bukan hang selamanya |
+Untuk detail lebih lanjut mengenai proyek CXS, silakan merujuk ke dokumen-dokumen berikut:
+
+-   [**Architecture.md**](Architecture.md): Penjelasan mendalam tentang desain arsitektur CXS, komponen inti, dan pipeline transformasi.
+-   [**API.md**](API.md): Detail mengenai Application Programming Interface (API) publik CXS, struktur data utama, dan fungsi-fungsi inti.
+-   [**Assembly.md**](Assembly.md): Informasi tentang Assembly Emitter, arsitektur output yang didukung, dan struktur file assembly yang dihasilkan.
+-   [**CLI.md**](CLI.md): Panduan lengkap penggunaan Command-Line Interface (CLI) CXS, termasuk opsi, argumen, dan contoh alur kerja.
+-   [**Security.md**](Security.md): Fokus pada teknik anti-analisis (Layer 4) dan bagaimana CXS meningkatkan ketahanan perangkat lunak terhadap reverse engineering.
 
 ---
 
-## Struktur Direktori
+## Fitur Utama
 
-```
-myos/
-├── boot/
-│   └── start.S           # Entry point ARM64
-├── kernel/
-│   ├── main.c            # kernel_main() — init semua subsistem
-│   ├── shell.c           # Shell interaktif
-│   ├── vectors.S         # ARM64 exception vector table
-│   └── error.c           # Error handler, panic, fuzzy suggest
-├── drivers/
-│   └── uart.c            # PL011 UART driver
-├── mm/
-│   └── mm.c              # Heap allocator (first-fit + coalescing)
-├── lib/
-│   ├── string.c          # String utilities (tanpa libc)
-│   ├── archive.c         # TAR + ZIP extractor + CRC32
-│   ├── exec.c            # ELF64 ARM64 loader
-│   └── pkg.c             # Package manager (mos)
-├── fs/
-│   └── fs.c              # In-memory ramfs
-├── proc/
-│   └── proc.c            # Process table
-├── net/
-│   ├── net.c             # VirtIO-NET driver + TCP/IP stack
-│   └── http.c            # HTTP/1.1 client
-├── include/              # Semua header (.h)
-├── kernel.ld             # Linker script — load @ 0x40080000
-└── Makefile
-```
+-   **30 Transformasi Berlapis**: Obfuskasi kode pada level instruksi, data, alur kontrol, dan anti-analisis.
+-   **Dukungan Multi-Arsitektur**: Kompatibel dengan x86-64 dan AArch64.
+-   **Verifikasi Semantik**: Memastikan fungsionalitas kode tetap terjaga setelah obfuskasi.
+-   **ASM Emitter**: Menghasilkan kode assembly yang siap dikompilasi.
 
 ---
 
-## Quick Start
+## Build
+
+CXS menggunakan `Makefile` untuk kompilasi. Sistem akan secara otomatis mendeteksi platform dan arsitektur Anda.
 
 ```bash
-# Install toolchain + QEMU
-sudo apt install gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu qemu-system-arm
-
-# Build kernel
-make
-
-# Jalankan di QEMU
-make run
-
-# Keluar QEMU: Ctrl+A lalu X
+make              # Kompilasi standar
+make DEBUG=1      # Kompilasi dengan simbol debug
+make clean        # Membersihkan hasil build
+make stress       # Menjalankan tes stres (50 siklus verifikasi)
 ```
 
-Setelah boot, akan tampil banner neofetch-style dan prompt:
+**Target yang Didukung (deteksi otomatis):**
+-   `linux x86_64` — GCC/Clang, GAS AT&T
+-   `android arm64` — Termux, AArch64 GAS
+-   `macos x86_64` / `macos arm64` — Apple Silicon / Intel
+-   `windows x64` — MASM (manual)
 
-```
-  █▀▄▀█ █▄█ █▀█ █▀   root@myos
-  █░▀░█ ░█░ █▄█ ▄█   -------------------
-                  OS         MyOS 1.0 ARM64
-                  Kernel     1.0.0 monolithic
-                  ...
+---
 
-root@myos:/# _
+## Usage
+
+```bash
+cxs                                   # Demo bawaan: f(x)=(x+5-3)*2
+cxs --stress 50                       # Tes stres 50 siklus (semua 30 transformasi)
+cxs -f samples/double.cxs            # Obfuskasi file .cxs IR
+cxs -f samples/double.cxs -s 20      # Obfuskasi + 20 siklus verifikasi
+cxs -f samples/double.cxs --emit-asm           # Hasilkan ASM native (.S)
+cxs -f samples/double.cxs --emit-asm --arm64   # Paksa output AArch64
+cxs -f samples/double.cxs --emit-asm -o out.S  # Nama file output kustom
+cxs --help
+cxs --version
 ```
 
 ---
 
-## Dokumentasi
+## .cxs IR File Format
 
-| File | Isi |
-|------|-----|
-| [BOOT.md](BOOT.md) | Boot flow lengkap, EL2→EL1, memory map, vector table |
-| [SHELL.md](SHELL.md) | Semua perintah shell beserta contoh penggunaan |
-| [PACKAGES.md](PACKAGES.md) | Package manager `mos` — GitHub install, URL, format mos.pkg |
-| [NETWORK.md](NETWORK.md) | TCP/IP stack, VirtIO-NET, HTTP client, API reference |
-| [BUILD.md](BUILD.md) | Build system, Makefile targets, QEMU flags, debugging |
-| [INTERNALS.md](INTERNALS.md) | Kernel internals — MM, FS, ELF loader, error system |
+CXS memproses file IR dengan sintaks mirip assembly. Contoh:
+
+```asm
+# komentar
+.block .entry
+  label   .entry
+  add     rax, 5
+  sub     rax, 3
+  jmp     .done
+.end
+
+.block .done
+  label   .done
+  ret
+.end
+```
+
+**Register:** `rax rbx rcx rdx rsi rdi rsp rbp r8..r15` (x86), `x0..x15 sp fp` (AArch64), `r0..r15` (generic)
+
+---
+
+## Verification
+
+Setiap proses obfuskasi diverifikasi untuk kesetaraan semantik:
+-   32 vektor input diuji terhadap fungsi emas `f(x)=(x+2)*2`.
+-   Tes stres: 30 eksekusi independen dengan seed acak baru.
+-   Hasil: **30/30 PASS**, `f(10) = 24` setiap eksekusi.
+
+---
+
+*CXS v4.0 — T1 through T30 — by VersaNexusIX*
